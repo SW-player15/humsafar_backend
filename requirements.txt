@@ -1,9 +1,10 @@
+# requirements.txt — humsafar-backend (reverted)
+# No supabase, no pillow — video stack removed entirely.
+
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
 pydantic>=2.7.0
 httpx>=0.27.0
 python-dotenv>=1.0.1
 python-multipart>=0.0.9
-pillow>=10.0.0
-supabase>=2.4.0
 pytest

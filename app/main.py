@@ -1,19 +1,20 @@
-# app/main.py  ← REPLACE EXISTING FILE
-# CHANGES vs previous:
-#   + video router registered
-#   + /static/videos served via StaticFiles
+# app/main.py  — humsafar-backend (reverted, stable)
+# Handles: /chat, /voice-chat
+# Proxies: /generate-video → video-service, /video-status → video-service
+# Does NOT run FFmpeg, generate video, or upload to Supabase.
 
 import logging
-from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
-from app.models       import ChatRequest, ChatResponse
-from app.services     import call_openrouter
-from app.routers      import voice as voice_router
-from app.routers      import video as video_router
+from app.models   import ChatRequest, ChatResponse
+from app.services import call_openrouter
+from app.routers  import voice as voice_router
+from app.routers  import video_proxy as video_proxy_router
 
 logging.basicConfig(
     level   = logging.INFO,
@@ -21,25 +22,22 @@ logging.basicConfig(
     datefmt = "%H:%M:%S",
 )
 
-app = FastAPI(title="Humsafar API", version="3.0.0")
+app = FastAPI(title="Humsafar API", version="4.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], allow_credentials=True,
-    allow_methods=["*"], allow_headers=["*"],
+    allow_origins     = ["*"],
+    allow_credentials = True,
+    allow_methods     = ["*"],
+    allow_headers     = ["*"],
 )
-
-# ── Static video files ────────────────────────────────────────────────────────
-_static_video_dir = Path("static/videos")
-_static_video_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/static/videos", StaticFiles(directory=str(_static_video_dir)), name="videos")
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(voice_router.router)
-app.include_router(video_router.router)
+app.include_router(video_proxy_router.router)
 
 
-# ── Existing /chat endpoint (unchanged) ──────────────────────────────────────
+# ── /chat (unchanged) ─────────────────────────────────────────────────────────
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     system_prompt = f"""
@@ -57,3 +55,8 @@ async def chat(req: ChatRequest):
     messages.append({"role": "user", "content": req.message})
     reply = await call_openrouter(messages)
     return ChatResponse(reply=reply)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "humsafar-backend"}
