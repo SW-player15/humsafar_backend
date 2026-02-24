@@ -24,6 +24,17 @@ class ChatResponse(BaseModel):
 
 
 # -------------------------
+# Voice
+# -------------------------
+
+class VoiceChatResponse(BaseModel):
+    user_text: str
+    bot_text: str
+    audio_base64: str
+    audio_format: str
+
+
+# -------------------------
 # Site Listing
 # -------------------------
 

@@ -1,12 +1,9 @@
-# app/routers/voice.py
-# NEW FILE
-
 import logging
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
-from app.models               import VoiceChatResponse
-from app.services             import voice_orchestrator
+from app.schemas import VoiceChatResponse
+from app.services import voice_orchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -15,25 +12,12 @@ router = APIRouter(prefix="/voice-chat", tags=["voice"])
 
 @router.post("", response_model=VoiceChatResponse)
 async def voice_chat(
-    audio:     UploadFile = File(...,  description="WAV audio from Android AudioRecord"),
-    site_name: str        = Form(...,  description="Heritage site name"),
-    site_id:   str        = Form(...,  description="Heritage site ID"),
-    language:  str        = Form(...,  description="BCP-47 code, e.g. en-IN"),
-    lang_name: str        = Form(...,  description="ENGLISH | HINDI | HINGLISH"),
+    audio:     UploadFile = File(..., description="WAV audio from Android AudioRecord"),
+    site_name: str        = Form(..., description="Heritage site name"),
+    site_id:   str        = Form(..., description="Heritage site ID"),
+    language:  str        = Form(..., description="BCP-47 code, e.g. en-IN"),
+    lang_name: str        = Form(..., description="ENGLISH | HINDI | HINGLISH"),
 ):
-    """
-    Full voice pipeline:
-      1. Receive WAV from Android
-      2. STT  → transcript
-      3. LLM  → response text
-      4. TTS  → audio bytes
-      5. Return { user_text, bot_text, audio_base64, audio_format }
-
-    All external API calls happen inside voice_orchestrator.run().
-    This handler is intentionally thin — no business logic here.
-    """
-    # Basic content-type guard — Sarvam STT rejects non-audio gracefully,
-    # but this saves a round-trip for accidental wrong uploads.
     if audio.content_type and not audio.content_type.startswith("audio/"):
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -64,13 +48,12 @@ async def voice_chat(
         msg = str(exc)
         logger.error(f"[/voice-chat] Pipeline failed: {msg}")
 
-        # Map stage prefix to HTTP status
         if msg.startswith("STT_FAILED"):
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY,  detail=msg)
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=msg)
         if msg.startswith("LLM_FAILED"):
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY,  detail=msg)
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=msg)
         if msg.startswith("TTS_FAILED"):
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY,  detail=msg)
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=msg)
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
 
     return VoiceChatResponse(
